@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ForWeb framework</title>
+    <script src="/assets/js/org/forweb/minified.js"></script>
+    <script src="/assets/js/project/AppPathBuilder.js"></script>
+    <link rel="stylesheet" href="/assets/css/style.css"/>
+</head>
+<body>
+    <div id="menu" class="main-menu"></div>
+    <div id="sidebar" class="sidebar"></div>
+    <div id="application"></div>
+    <textarea rows="20" id="text"></textarea>
+    <br/>
+    <textarea rows="20" id="out"></textarea>
+    <button onclick="process()">process</button>
+    <button onclick="r_process()">reverse process</button>
+<script>
+    function process() {
+        var t = document.getElementById('text');
+        var out = document.getElementById('out');
+        out.value = t.value.replace(/\n/g, '\\n').replace(/\"/g, "\\\"");
+    }
+    function r_process() {
+        var t = document.getElementById('text');
+        var out = document.getElementById('out');
+        t.value = out.value.replace(/(\\n)/g, '\n').replace(/(\\\")/g, "\"");
+    }
+
+    Engine.log = false;
+    !function() {
+        var AppPathBuilder = Engine.require('AppPathBuilder');
+        Engine.pathBuilder = [new AppPathBuilder()];
+
+        Engine.define('runner', 'Application', function () {
+            var Application = Engine.require('Application');
+            var app = new Application();
+            app.run();
+        });
+    }()
+</script>
+</body>
+</html>
