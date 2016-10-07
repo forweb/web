@@ -70,3 +70,18 @@ body {
     line-height: 1.42857143;
     color: #333;
 }
+
+
+.warning, .info{
+    padding: 10px;
+}
+.warning {
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+    border-color: #f5e79e;
+}
+.info{
+    color: #31708f;
+    background-color: #d9edf7;
+    border-color: #9acfea;
+}

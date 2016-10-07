@@ -1821,11 +1821,13 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
             }
         };
 
-        if(dispatcher.applicationName === applicationName && dispatcher.activeApplication.performUpdate) {
+        if(dispatcher.applicationName === applicationName && dispatcher.activeApplication.canStay) {
             contextUpdate();
             windowUpdate(dispatcher.activeApplication);
-            dispatcher.activeApplication.performUpdate();
-            return;
+            var isCanStay = dispatcher.activeApplication.canStay();
+            if(isCanStay !== false) {
+                return;
+            }
         }
         closeApplication(dispatcher, applicationName);
         contextUpdate();

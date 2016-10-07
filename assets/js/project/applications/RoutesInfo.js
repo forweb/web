@@ -9,11 +9,11 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'FullPageApp'], function(){
         this.URL = 'routes-info';
         this.context = context;
         this.placeApplication = placeApplication;
-        this.performUpdate();
+        this.canStay();
     }
     RoutesInfo.prototype = Object.create(FullPageApp.prototype);
 
-    RoutesInfo.prototype.performUpdate = function() {
+    RoutesInfo.prototype.canStay = function() {
         var app = this.context.request.params.app;
         if(!app) {
             Word('routes_info_content', this.container, 'html');
@@ -26,9 +26,9 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'FullPageApp'], function(){
             case 'application':
             case 'dispatcher':
                 Word('routes_' +app+ '_content', this.container, 'html');
-                break;
+                return true;
             default:
-                this.placeApplication('Page404');
+                return false;
         }
     };
 
