@@ -5,19 +5,23 @@
     background-color: #f8f8f8;
     border: 1px solid #e7e7e7;
 }
-.main-menu .menu > .menu-item{
+
+.main-menu .menu > .menu-item {
     float: left;
 }
-.main-menu a{
+
+.menu a {
     padding: 15px;
     line-height: 20px;
     color: #777;
     display: inline-block;
 }
-.main-menu a.active{
+
+.main-menu a.active {
     color: #555;
     background-color: #e7e7e7;
 }
+
 code {
     display: block;
     white-space: pre;
@@ -29,6 +33,7 @@ code {
     border: 1px solid #e1e1e8;
     border-radius: 4px;
 }
+
 table code, code.inline {
     display: inline-block;
     padding: 0 4px;
@@ -41,6 +46,7 @@ table td {
     vertical-align: top;
     border-top: 1px solid #ddd;
 }
+
 table th {
     padding: 8px;
     line-height: 1.42857143;
@@ -50,20 +56,22 @@ table th {
     border-bottom: 2px solid #ddd;
 }
 
-
-table{
+table {
     border-spacing: 0;
     border-collapse: collapse;
     width: 100%;
     max-width: 100%;
     margin-bottom: 20px;
 }
+
 .menu-item > a {
     text-decoration: none;
 }
+
 .menu-item.active > a {
     font-weight: bold;
 }
+
 body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 14px;
@@ -71,17 +79,63 @@ body {
     color: #333;
 }
 
-
-.warning, .info{
+.warning, .info {
     padding: 10px;
 }
+
 .warning {
     color: #8a6d3b;
     background-color: #fcf8e3;
     border-color: #f5e79e;
 }
-.info{
+
+.info {
     color: #31708f;
     background-color: #d9edf7;
     border-color: #9acfea;
 }
+
+.clear {
+    *zoom: 1;
+}
+
+.clear:before, .clear:after {
+    display: table;
+    content: "";
+    line-height: 0;
+}
+
+.clear:after {
+    clear: both;
+}
+
+.sidebar {
+    height: 100%;
+    /* margin-left: -160px; */
+    float: left;
+    margin-bottom: 0;
+    background-color: #f8f8f8;
+    border: 1px solid #e7e7e7;
+    margin-right: 15px;
+}
+
+body, html {
+    height: 100%;
+}
+
+    .sidebar .menu-item:first-child {
+        border-top: 1px #e5e5e5 solid;
+    }
+
+    .sidebar .menu-item:first-child {
+        border-top: none;
+    }
+    .sidebar .menu-item a {
+        padding: 12px 15px;
+        display: inline-block;
+    }
+    .sidebar .menu-item {
+        border-top: 1px #e5e5e5 solid;
+        min-width: 150px;
+        max-width: 250px;
+    }

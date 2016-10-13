@@ -1076,14 +1076,14 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
         }
     };
 
-    Menu.prototype.menu = function(className, label, callback, _parentActivate) {
+    Menu.prototype.menu = function(url, label, callback, _parentActivate) {
         var me = this;
         if(typeof label === 'function' && !callback) {
             callback = label;
             label = null;
         }
-        if(className && !label) {
-            label = StringUtils.normalizeText(className);
+        if(url && !label) {
+            label = StringUtils.normalizeText(url);
         }
         if(!callback && this.defaultCallback) {
             callback = this.defaultCallback;
@@ -1100,12 +1100,12 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
             }
             Dom.addClass(item, 'active');
         };
-        if(className) {
-            var params = {href: '/' + StringUtils.normalizeText(className, '-')};
+        if(url) {
+            var params = {href: '/' + url};
             params.onclick = function (e) {
                 activate(e);
                 if (callback) {
-                    callback(className, e);
+                    callback(url, e);
                 }
             };
             link = Dom.el('a', params, label);
@@ -1115,11 +1115,11 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
 
         this.container.appendChild(item);
         return {
-            menu: function (cn, l, c) {
-                return me.menu(cn, l, c, activate);
+            menu: function (url, l, c) {
+                return me.menu(url, l, c, activate);
             },
-            subMenu: function (cn, l, c) {
-                var out = me.menu(cn, l, c, activate);
+            subMenu: function (url, l, c) {
+                var out = me.menu(url, l, c, activate);
                 if(subMenuHolder === null) {
                     subMenuHolder = Dom.el('ul');
                     item.appendChild(subMenuHolder);
@@ -1617,102 +1617,99 @@ Engine.define('GenericForm', ['Dom', 'Text'], function(){
 
     return GenericForm;
 });
-
 Engine.define('UrlResolver', ['StringUtils'], function(StringUtils) {
-    /**
-     *
-     * @type {{app:string, data:[{dynamic:boolean,name:string}]}}
-     */
-    var mapping = [];
-    return {
-        regex: /(^\/)|(\/$)/,
-        strategy: 'path',
-        resolve: function (url) {
-            url = StringUtils.removeSlashes(url);
-            if(url === '') {
-                url = 'home';
-            }
-            var parts = url.split('/');
-            var params;
-            var app = null;
+    function UrlResolver(strategy) {
+        this.mapping = [];
+        this.strategy = strategy || 'path';
+    }
+    UrlResolver.prototype.resolve = function(url) {
+        url = StringUtils.removeSlashes(url);
+        if(url === '') {
+            url = 'home';
+        }
+        var mapping = this.mapping;
+        var parts = url.split('/');
+        var params;
+        var app = null;
 
-            for(var k = 0; k < mapping.length; k++) {
-                var compatible = false;
+        for(var k = 0; k < mapping.length; k++) {
+            var compatible = false;
+            params = {};
+            var route = mapping[k];
+            var data = route.data;
+            if(data.length === parts.length || data[data.length - 1] === '*') {
+                compatible = true;
+                app = route.app;
                 params = {};
-                var route = mapping[k];
-                var data = route.data;
-                if(data.length === parts.length || data[data.length - 1] === '*') {
-                    compatible = true;
-                    app = route.app;
-                    params = {};
-                    for (var i = 0; i < data.length; i++) {
-                        var item = data[i];
-                        if(item.dynamic) {
-                            params[item.name] = parts[i];
-                        } else if(item.name === parts[i] || item.name === '*'){
-                        } else {
-                            compatible = false;
+                for (var i = 0; i < data.length; i++) {
+                    var item = data[i];
+                    if(item.dynamic) {
+                        params[item.name] = parts[i];
+                    } else if(item.name === parts[i] || item.name === '*'){
+                    } else {
+                        compatible = false;
+                        break;
+                    }
+                }
+            }
+            if(compatible) {
+                app = route.app;
+                break;
+            } else {
+                params = {};
+                app = '';
+            }
+        }
+        if(url === 'home') {
+            url = '';
+        }
+        return {params: params, app: app, url: url};
+    };
+    UrlResolver.prototype.addMapping = function(className, url){
+        if(typeof className !== 'string' || typeof url !== 'string') {
+            throw 'Invalid arguments exception';
+        }
+        var mapping = this.mapping;
+        var urlData = this.parseUrl(url);
+        for(var i = 0; i< mapping; i++) {
+            var data = mapping[i].data;
+            var same = data.length === urlData.length;
+            if(same) {
+                for(var d = 0; d < data.length; d++) {
+                    var oldItem = data[d];
+                    var newItem = urlData[d];
+                    if(!oldItem.dynamic && !newItem.dynamic) {
+                        if(oldItem.name !== newItem.name) {
+                            same = false;
                             break;
                         }
                     }
                 }
-                if(compatible) {
-                    app = route.app;
-                    break;
-                } else {
-                    params = {};
-                    app = '';
-                }
             }
-            if(url === 'home') {
-                url = '';
+            if(same) {
+                throw "Can't put two items with same request mapping: " + url;
             }
-            return {params: params, app: app, url: url};
-        },
-        addMapping: function(className, url){
-            if(typeof className !== 'string' || typeof url !== 'string') {
-                throw 'Invalid arguments exception';
-            }
-            var urlData = this.parseUrl(url);
-            for(var i = 0; i< mapping; i++) {
-                var data = mapping[i].data;
-                var same = data.length === urlData.length;
-                if(same) {
-                    for(var d = 0; d < data.length; d++) {
-                        var oldItem = data[d];
-                        var newItem = urlData[d];
-                        if(!oldItem.dynamic && !newItem.dynamic) {
-                            if(oldItem.name !== newItem.name) {
-                                same = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if(same) {
-                    throw "Can't put two items with same request mapping: " + url;
-                }
-            }
-            mapping.push({
-                app: className,
-                data: urlData
-            });
-        },
-        parseUrl: function(url){
-            url = StringUtils.removeSlashes(url);
-            var parts = url.split("/");
-            var out = [];
-            for(var i = 0; i < parts.length; i++) {
-                var name = parts[i];
-                var dynamic = name[0] == ':';
-                if(dynamic) {
-                    name =  name.substring(1);
-                }
-                out.push({name: name, dynamic: dynamic});
-            }
-            return out;
         }
-    }
+        mapping.push({
+            app: className,
+            data: urlData
+        });
+    };
+    UrlResolver.prototype.parseUrl = function(url){
+        url = StringUtils.removeSlashes(url);
+        var parts = url.split("/");
+        var out = [];
+        for(var i = 0; i < parts.length; i++) {
+            var name = parts[i];
+            var dynamic = name[0] == ':';
+            if(dynamic) {
+                name =  name.substring(1);
+            }
+            out.push({name: name, dynamic: dynamic});
+        }
+        return out;
+    };
+    return UrlResolver;
 });
 Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
 
@@ -1728,7 +1725,7 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
         this.applicationName = null;
         this.activeApplication = null;
         this.history = history;
-        this.urlResolver = urlResolver || UrlResolver;
+        this.urlResolver = urlResolver || (new UrlResolver());
         var me = this;
         var openApplication = function(){
             if(me.urlResolver) {
@@ -1817,7 +1814,7 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
             var path = UrlUtils.getPath();
             if(request.url !== path) {
                 var hash = document.location.hash;
-                this.history.pushState({}, title, (request.url || '/') + (hash || ''));
+                this.history.pushState({}, title, "/" + (request.url || '') + (hash || ''));
             }
         };
 
@@ -1838,10 +1835,9 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
 
     function initApplication (dispatcher, contructor) {
         var application;
-        if(dispatcher.applicationName)
-            var placeApplication = function(applicationName, directives){
-                dispatcher.placeApplication(applicationName, directives);
-            };
+        var placeApplication = function(applicationName, directives){
+            dispatcher.placeApplication(applicationName, directives);
+        };
         if(typeof contructor == "function") {
             application = new contructor(dispatcher.context, dispatcher.config, placeApplication);
         } else {
@@ -1906,13 +1902,25 @@ Engine.define('Word', ['Rest'], function(){
             container = module;
             module = 'default';
         }
+        if(!strategy) {
+            strategy = 'text';
+        }
         if(typeof module !== 'string' && !container) {
             container = module;
             module = 'default';
         }
 
         var clb = function(text){
-            if(strategy && strategy != 'text') {
+            if(container.getAttribute('data-w-key') !== key) {
+                container.setAttribute('data-w-key', key);
+            }
+            if(container.getAttribute('data-w-module') !== module) {
+                container.setAttribute('data-w-module', module);
+            }
+            if(container.getAttribute('data-w-strategy') !== strategy) {
+                container.setAttribute('data-w-strategy', strategy);
+            }
+            if(strategy != 'text') {
                 if(strategy == 'append') {
                     container.appendChild(document.createTextNode(text));
                 } else {

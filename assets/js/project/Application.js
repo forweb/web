@@ -9,24 +9,17 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
 
     function Application() {
         var context = {
-            sidebar:  Dom.id('sidebar'),
             buildSidebar: this.buildSidebar
         };
         Rest.host = document.location.protocol + '//' + document.location.host + '/';
         this.initDispatcher(context);
         this.initMenu();
-        this.initSidebar(context);
         Word.language = 'ru';
     }
 
     Application.prototype.initDispatcher = function(context){
         var config = new Config();
         this.dispatcher = new Dispatcher('application', context, config);
-    };
-    Application.prototype.initSidebar = function(context){
-        var sidebar = new Menu();
-        context.sidebar.appendChild(sidebar.container);
-        
     };
     Application.prototype.initMenu = function(){
         var me = this;
@@ -41,7 +34,7 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
         me.dispatcher.addMapping('EngineInfo', 'engine-info');
         Word('menu_engine', engine.link);
 
-        var utils = mainMenu.menu('utils-info');
+       /* var utils = mainMenu.menu('utils-info');
         me.dispatcher.addMapping('UtilsInfo', 'utils-info');
         Word('menu_utils', utils.link);
 
@@ -55,7 +48,7 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
 
         var word = mainMenu.menu('word-info');
         me.dispatcher.addMapping('WordInfo', 'word-info');
-        Word('menu_word', word.link);
+        Word('menu_word', word.link);*/
 
         var routes = mainMenu.menu('routes-info');
         me.dispatcher.addMapping('RoutesInfo', 'routes-info');
@@ -67,7 +60,7 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
     };
 
     Application.prototype.run = function(){
-        Dom.id('menu').appendChild(this.mainMenu.container);
+        Dom.append(Dom.id('menu'), [this.mainMenu.container, Dom.el('div', 'clear')]);
     };
 
     return Application;

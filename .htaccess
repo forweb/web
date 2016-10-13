@@ -1,0 +1,24 @@
+RewriteEngine On
+
+############## remove or add WWW from url ###############
+#to add 'WWW' use this:
+#redirect http://www.* to http://*
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
+#redirect httpS://www.* to httpS://*
+RewriteCond %{HTTPS} on
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+#to remove 'WWW' use this:
+#RewriteCond %{HTTPS} off
+#RewriteCond %{HTTP_HOST} !^www\.
+#RewriteRule ^(.*)$ http://www.%{HTTP_HOST}/$1 [R=301,L]
+#RewriteCond %{HTTPS} on
+#RewriteCond %{HTTP_HOST} !^www\.
+#RewriteRule ^(.*)$ https://www.%{HTTP_HOST}/$1 [R=301,L]
+#########################################################
+
+RewriteCond %{REQUEST_URI} !(assets)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.html [L,QSA]

@@ -1,14 +1,26 @@
-Engine.define('RoutesInfo', ['Dom', 'Word', 'FullPageApp'], function(){
+Engine.define('RoutesInfo', ['Dom', 'Word', 'Menu', 'FullPageApp'], function(){
     var Dom = Engine.require('Dom');
     var Word = Engine.require('Word');
+    var Menu = Engine.require('Menu');
     var FullPageApp = Engine.require('FullPageApp');
 
     function RoutesInfo(context, config, placeApplication){
         FullPageApp.apply(this, arguments);
-        this.container = Dom.el('div');
-        this.URL = 'routes-info';
         this.context = context;
         this.placeApplication = placeApplication;
+        this.content = Dom.el('div', 'content');
+        var menu = new Menu(placeApplication);
+        var m = menu.menu('routes-info/dispatcher', 'Dispatcher');
+        Word("menu_routes_dispatcher", m.link);
+
+        m = menu.menu('routes-info/application', 'Application');
+        Word("menu_routes_applications", m.link);
+        m = menu.menu('routes-info/url-resolver', 'Url Resolver');
+        Word("menu_routes_url_resolver", m.link);
+        this.sidebar = Dom.el('div', 'sidebar', menu.container);
+
+
+        this.container = Dom.el('div', null, [this.sidebar, this.content]);
         this.canStay();
     }
     RoutesInfo.prototype = Object.create(FullPageApp.prototype);
@@ -16,7 +28,7 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'FullPageApp'], function(){
     RoutesInfo.prototype.canStay = function() {
         var app = this.context.request.params.app;
         if(!app) {
-            Word('routes_info_content', this.container, 'html');
+            Word('routes_info_content', this.content, 'html');
             return
         }
         switch (app) {
@@ -25,7 +37,7 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'FullPageApp'], function(){
                 /*fall through*/
             case 'application':
             case 'dispatcher':
-                Word('routes_' +app+ '_content', this.container, 'html');
+                Word('routes_' +app+ '_content', this.content, 'html');
                 return true;
             default:
                 return false;
