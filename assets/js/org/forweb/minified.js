@@ -15,16 +15,16 @@ var Engine = (function(){
         var style = "padding:10px;margin:5px;border-radius: 3px;";
         switch (type) {
             case 'S':
-                style += 'color:#3c763d;background-color:#dff0d8;border-color:#d6e9c6;';
+                style += 'color:#3c763d;background-color:#dff0d8;border:1px solid #d6e9c6;';
                 break;
             case 'I':
-                style += 'color: #31708f;background-color: #d9edf7;border-color: #9acfea;';
+                style += 'color: #31708f;background-color: #d9edf7;border:1px solid #9acfea;';
                 break;
             case 'W':
-                style += 'color: #8a6d3b;background-color: #fcf8e3;border-color: #f5e79e;';
+                style += 'color: #8a6d3b;background-color: #fcf8e3;border:1px solid #f5e79e;';
                 break;
             case 'E':
-                style += 'color:#a94442;background-color:#f2dede;border-color:#ebccd1;';
+                style += 'color:#a94442;background-color:#f2dede;border:1px solid #ebccd1;';
                 break;
             default:
                 throw 'Undefined message type: ' + type;
@@ -215,16 +215,13 @@ var Engine = (function(){
 })();
 
 Engine.define('Ajax', (function () {
-    var out = {
+    var Ajax = {
         /**
          * @var object with key-value pairs with default ajax headers
          */
         headers: null
     };
-    out.ajax = function (data, resolve, reject) {
-        var xhr = out.getXhr();
-        xhr.open(data.type, data.url, true);
-        var headers = out.headers;
+    function addHeaders(xhr, headers){
         if (headers) {
             for (var i in headers) {
                 if (headers.hasOwnProperty(i)) {
@@ -232,9 +229,16 @@ Engine.define('Ajax', (function () {
                 }
             }
         }
+    }
+    Ajax.ajax = function (data, resolve, reject) {
+        var xhr = Ajax.getXhr();
+        xhr.open(data.type, data.url, true);
+        addHeaders(Ajax.headers);
+        addHeaders(data.headers);
+
         xhr.onload = function () {
-            if (xhr.status == 200) {
-                resolve(out.process(xhr, data.responseType), xhr);
+            if (xhr.status >199 && xhr.status < 300) {
+                resolve(Ajax.process(xhr, data.responseType), xhr);
             } else if (reject) {
                 reject(xhr)
             }
@@ -242,7 +246,7 @@ Engine.define('Ajax', (function () {
         xhr.send(data.data);
         return xhr;
     };
-    out.process = function (xhr, t) {
+    Ajax.process = function (xhr, t) {
         var response = xhr.responseText;
         if(t === 'text' || !response) {
             return response;
@@ -253,7 +257,7 @@ Engine.define('Ajax', (function () {
     /**
      * @returns XMLHttpRequest
      */
-    out.getXhr = function () {
+    Ajax.getXhr = function () {
         var xmlhttp = null;
         try {
             xmlhttp = new XMLHttpRequest();
@@ -270,7 +274,7 @@ Engine.define('Ajax', (function () {
         }
         return xmlhttp;
     };
-    return out;
+    return Ajax;
 }));
 
 Engine.define('Rest', 'Ajax', (function () {
@@ -1070,7 +1074,7 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
     Menu.prototype.show = function() {
         Dom.removeClass(this.container, 'hidden');
     };
-    Menu.prototype.diactivateAll = function() {
+    Menu.prototype.deactivateAll = function() {
         for(var i = 0; i < this.menus.length; i++) {
             Dom.removeClass(this.menus[i], 'active');
         }
@@ -1094,7 +1098,7 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
         var activate = function(e){
             if(!_parentActivate) {
                 e.preventDefault();
-                me.diactivateAll();
+                me.deactivateAll();
             } else {
                 _parentActivate(e);
             }
@@ -1717,10 +1721,9 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
     var UrlUtils = Engine.require('UrlUtils');
     var UrlResolver = Engine.require('UrlResolver');
 
-    var Dispatcher = function(appNode, context, config, urlResolver){
+    var Dispatcher = function(appNode, context, urlResolver){
         this.app = typeof appNode === 'string' ? Dom.id(appNode) : appNode;
         this.context = context || {};
-        this.config = config || {};
         this.applications = {};
         this.applicationName = null;
         this.activeApplication = null;
@@ -1839,11 +1842,11 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
             dispatcher.placeApplication(applicationName, directives);
         };
         if(typeof contructor == "function") {
-            application = new contructor(dispatcher.context, dispatcher.config, placeApplication);
+            application = new contructor(dispatcher.context, placeApplication);
         } else {
             application = contructor;
             if(application.init) {
-                application.init(dispatcher.context, dispatcher.config, placeApplication);
+                application.init(dispatcher.context, placeApplication);
             }
         }
         return application;

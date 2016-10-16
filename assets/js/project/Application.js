@@ -18,8 +18,8 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
     }
 
     Application.prototype.initDispatcher = function(context){
-        var config = new Config();
-        this.dispatcher = new Dispatcher('application', context, config);
+        context.config = new Config();
+        this.dispatcher = new Dispatcher('application', context);
     };
     Application.prototype.initMenu = function(){
         var me = this;
@@ -34,10 +34,11 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
         me.dispatcher.addMapping('EngineInfo', 'engine-info');
         Word('menu_engine', engine.link);
 
-       /* var utils = mainMenu.menu('utils-info');
+        var utils = mainMenu.menu('utils-info');
         me.dispatcher.addMapping('UtilsInfo', 'utils-info');
+        me.dispatcher.addMapping('UtilsInfo', 'utils-info/:app');
         Word('menu_utils', utils.link);
-
+/*
         var forms = mainMenu.menu('forms-info');
         me.dispatcher.addMapping('FormsInfo', 'forms-info');
         Word('menu_forms', forms.link);

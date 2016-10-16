@@ -13,8 +13,6 @@ Engine.define('AppPathBuilder', function(){
             case 'FormsInfo':
             case 'RoutesInfo':
             case 'EngineInfo':
-            case 'SidebarApp':
-            case 'FullPageApp':
                 path = 'applications/' + app;
                 break;
             case 'Application':

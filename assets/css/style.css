@@ -81,6 +81,7 @@ body {
 
 .warning, .info {
     padding: 10px;
+    border: 1px solid;
 }
 
 .warning {
@@ -111,12 +112,19 @@ body {
 
 .sidebar {
     height: 100%;
-    /* margin-left: -160px; */
-    float: left;
+    width: 100%;
     margin-bottom: 0;
     background-color: #f8f8f8;
     border: 1px solid #e7e7e7;
-    margin-right: 15px;
+}
+@media (min-width: 468px) {
+    .sidebar {
+        float: left;
+        width: 250px;
+    }
+    .content {
+        margin-left: 265px;
+    }
 }
 
 body, html {
@@ -136,6 +144,4 @@ body, html {
     }
     .sidebar .menu-item {
         border-top: 1px #e5e5e5 solid;
-        min-width: 150px;
-        max-width: 250px;
     }

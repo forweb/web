@@ -1,11 +1,9 @@
-Engine.define('RoutesInfo', ['Dom', 'Word', 'Menu', 'FullPageApp'], function(){
+Engine.define('RoutesInfo', ['Dom', 'Word', 'Menu'], function(){
     var Dom = Engine.require('Dom');
     var Word = Engine.require('Word');
     var Menu = Engine.require('Menu');
-    var FullPageApp = Engine.require('FullPageApp');
 
-    function RoutesInfo(context, config, placeApplication){
-        FullPageApp.apply(this, arguments);
+    function RoutesInfo(context, placeApplication){
         this.context = context;
         this.placeApplication = placeApplication;
         this.content = Dom.el('div', 'content');
@@ -23,7 +21,6 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'Menu', 'FullPageApp'], function(){
         this.container = Dom.el('div', null, [this.sidebar, this.content]);
         this.canStay();
     }
-    RoutesInfo.prototype = Object.create(FullPageApp.prototype);
 
     RoutesInfo.prototype.canStay = function() {
         var app = this.context.request.params.app;
