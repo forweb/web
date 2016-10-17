@@ -22,8 +22,6 @@ Engine.define('UtilsInfo', ['Dom', 'Word', 'Menu'], function(){
         Word("menu_utils_url_utils", m.link);
         m = menu.menu('utils-info/screen-utils', 'ScreenUtils');
         Word("menu_utils_screen_utils", m.link);
-        m = menu.menu('utils-info/keyboard-utils', 'KeyboardUtils');
-        Word("menu_utils_keyboard_utils", m.link);
         this.sidebar = Dom.el('div', 'sidebar', menu.container);
         this.container = Dom.el('div', null, [this.sidebar, this.content]);
         this.canStay();
@@ -39,7 +37,6 @@ Engine.define('UtilsInfo', ['Dom', 'Word', 'Menu'], function(){
             case 'string-utils':
             case 'url-utils':
             case 'screen-utils':
-            case 'keyboard-utils':
                 app = app.replace("-", "_");
                 /*fall through*/
             case 'ajax':

@@ -9,7 +9,8 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
 
     function Application() {
         var context = {
-            buildSidebar: this.buildSidebar
+            buildSidebar: this.buildSidebar,
+            config: new Config()
         };
         Rest.host = document.location.protocol + '//' + document.location.host + '/';
         this.initDispatcher(context);
