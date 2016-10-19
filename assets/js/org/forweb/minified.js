@@ -15,16 +15,16 @@ var Engine = (function(){
         var style = "padding:10px;margin:5px;border-radius: 3px;";
         switch (type) {
             case 'S':
-                style += 'color:#3c763d;background-color:#dff0d8;border:1px solid #d6e9c6;';
+                style += 'color:#3c763d;background-color:#dff0d8;border-color:#d6e9c6;';
                 break;
             case 'I':
-                style += 'color: #31708f;background-color: #d9edf7;border:1px solid #9acfea;';
+                style += 'color: #31708f;background-color: #d9edf7;border-color: #9acfea;';
                 break;
             case 'W':
-                style += 'color: #8a6d3b;background-color: #fcf8e3;border:1px solid #f5e79e;';
+                style += 'color: #8a6d3b;background-color: #fcf8e3;border-color: #f5e79e;';
                 break;
             case 'E':
-                style += 'color:#a94442;background-color:#f2dede;border:1px solid #ebccd1;';
+                style += 'color:#a94442;background-color:#f2dede;border-color:#ebccd1;';
                 break;
             default:
                 throw 'Undefined message type: ' + type;
@@ -235,7 +235,6 @@ Engine.define('Ajax', (function () {
         xhr.open(data.type, data.url, true);
         addHeaders(Ajax.headers);
         addHeaders(data.headers);
-
         xhr.onload = function () {
             if (xhr.status >199 && xhr.status < 300) {
                 resolve(Ajax.process(xhr, data.responseType), xhr);
@@ -559,6 +558,69 @@ Engine.define('Dom', (function () {
     };
     return Dom
 }));
+Engine.define('KeyboardUtils', {
+    translateButton: function(code) {
+        switch (code) {
+            case 9: return 'tab';
+            case 13: return 'enter';
+            case 16: return 'shift';
+            case 17: return 'ctrl';
+            case 18: return 'alt';
+            case 20: return 'caps lock';
+            case 27: return 'esc';
+            case 32: return 'space';
+            case 33: return 'pg up';
+            case 34: return 'pg dn';
+            case 35: return 'end';
+            case 36: return 'home';
+            case 37: return 'ar left';
+            case 38: return 'ar top';
+            case 39: return 'ar right';
+            case 40: return 'ar bottom';
+            case 45: return 'ins';
+            case 46: return 'del';
+            case 91: return 'super';
+            case 96: return 'num 0';
+            case 97: return 'num 1';
+            case 98: return 'num 2';
+            case 99: return 'num 3';
+            case 100: return 'num 4';
+            case 101: return 'num 5';
+            case 102: return 'num 6';
+            case 103: return 'num 7';
+            case 104: return 'num 8';
+            case 105: return 'num 9';
+            case 106: return '*';
+            case 107: return '+';
+            case 109: return '-';
+            case 111: return '/';
+            case 112: return 'f2';
+            case 113: return 'f3';
+            case 114: return 'f4';
+            case 115: return 'f5';
+            case 116: return 'f6';
+            case 117: return 'f7';
+            case 119: return 'f8';
+            case 120: return 'f9';
+            case 121: return 'f10';
+            case 122: return 'f11';
+            case 123: return 'f12';
+            case 144: return 'num lock';
+            case 186: return ';';
+            case 187: return '=';
+            case 188: return ',';
+            case 189: return '-';
+            case 190: return '.';
+            case 191: return '/';
+            case 192: return '~';
+            case 219: return '[';
+            case 220: return '\\';
+            case 221: return ']';
+            case 222: return '\'';
+            default: return String.fromCharCode(code);
+        }
+    }
+});
 Engine.define('ScreenUtils', {
     window: function () {
         var e = window, a = 'inner';
@@ -1051,9 +1113,9 @@ Engine.define('Menu', ['Dom', 'StringUtils'], function(Dom, StringUtils){
             };
             link = Dom.el('a', params, label);
             item.appendChild(link);
-        }
-        if(StringUtils.removeSlashes(url) === StringUtils.removeSlashes(document.location.pathname)) {
-            activate();
+            if(StringUtils.removeSlashes(url) === StringUtils.removeSlashes(document.location.pathname)) {
+                activate();
+            }
         }
         var subMenuHolder = null;
 
@@ -1314,19 +1376,29 @@ Engine.define('Checkbox', ['Dom', 'AbstractInput'], function(Dom, AbstractInput)
         delete out.value;
         return out;
     };
+    Checkbox.prototype.toString = function() {
+        return "Radio(" + this.input.name + ")";
+    };
+    Checkbox.toString = function() {
+        return "Radio"
+    };
     Checkbox.prototype.constructor = Checkbox;
     return Checkbox;
 });
 Engine.define('FieldMeta', function(){
     function FieldMeta(params){
         if(!params)params = {};
-        this.ignore = params.ignore || false;//this field will be ignored
-        this.render = params.render || null;//render for current field. Should be component with container
+        this.ignore = params.ignore || false;//this field will be ignored on form building
+        this.render = params.render || null;//Function for component render. Return type should have "AbstractInput" as parent.
         this.wrapper = params.wrapper || null;//if defined, all content will be putted inside of it. DOM node or function
         this.contentBefore = params.contentBefore || null;
         this.contentAfter = params.contentAfter || null;
         this.onchange = params.onchange || null;//callback function for onchange
         this.validations = params.validations || null;//validation rules
+        this.removeErrors = params.removeErrors || null;//custom remove errors function
+        this.errorMessages = params.errorMessages || null;//error messages holder. Should be object with key-value pairs or string
+        this.options = params.options || null;//required field for "select", "radio", "checkboxes" component
+        this.type = params.type || "text";//if render method not specified, this type will be used for component rendering
     }
     return FieldMeta;
 });
@@ -1342,15 +1414,18 @@ Engine.define('Text', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     Text.prototype.getInputType = function() {
         return 'text';
     };
+    Text.prototype.toString = function() {
+        return "Text(" + this.input.name + ")";
+    };
+    Text.toString = function() {
+        return "Text"
+    };
     Text.prototype.constructor = Text;
     return Text;
 });
 Engine.define('Select', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     function Select(params) {
         AbstractInput.apply(this, arguments);
-        this.input.remove();
-        delete this.input;
-
         this.params = params;
         this.options = params.options;
         this.update(params.value);
@@ -1363,7 +1438,7 @@ Engine.define('Select', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
         for(var i = 0; i < this.options.length; i++) {
             var opt = this.options[i];
             var option = Dom.el('option', {value: opt.value}, opt.label);
-            Dom.update(this.input, option);
+            Dom.append(this.input, option);
         }
     };
     Select.prototype.getElementType = function() {
@@ -1371,6 +1446,12 @@ Engine.define('Select', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     };
     Select.prototype.getInputType = function() {
         return null;
+    };
+    Select.prototype.toString = function() {
+        return "Select(" + this.input.name + ")";
+    };
+    Select.toString = function() {
+        return "Select"
     };
 
     return Select;
@@ -1396,6 +1477,13 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
         this.optionsContainer.innerHTML = '';
         this.inputs = [];
         var name = this.params.name;
+        var listeners = {};
+        for(var key in this.params) {
+            if(!this.params.hasOwnProperty(key))continue;
+            if(typeof this.params[key] === 'function'){
+                listeners[key] = this.params[key];
+            }
+        }
         for(var i = 0; i < this.options.length; i++) {
             var opt = this.options[i];
             var input = Dom.el('input', {
@@ -1407,13 +1495,7 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
             if(opt.value === this.getValue() || opt.value === value) {
                 input.checked = true;
             }
-            var listeners = {};
-            for(var key in this.params) {
-                if(!this.params.hasOwnProperty(key))continue;
-                if((key + "").indexOf('on') === 0 && typeof this.params[key] === 'function'){
-                    listeners[key] = this.params[key];
-                }
-            }
+
             Dom.addListeners(input, listeners);
             this.inputs.push(input);
             this.optionsContainer.appendChild(
@@ -1427,7 +1509,6 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     Radio.prototype.getInputType = function() {
         return '';
     };
-
     Radio.prototype.getValue = function() {
         for(var i = 0; i < this.inputs.length; i++) {
             if(this.inputs[i].checked) {
@@ -1435,6 +1516,12 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
             }
         }
         return '';
+    };
+    Radio.prototype.toString = function() {
+        return "Radio(" + this.input.name + ")";
+    };
+    Radio.toString = function() {
+        return "Radio"
     };
     return Radio;
 });
@@ -1465,19 +1552,47 @@ Engine.define('Password', ['Dom', 'AbstractInput'], function(Dom, AbstractInput)
     Password.prototype.getInputType = function() {
         return this.showChars ? 'text' : 'password';
     };
+    Password.toString = function() {
+        return "Password"
+    };
     Password.prototype.constructor = Password;
+
     return Password;
 });
-Engine.define('GenericForm', ['Dom', 'Text'], function(){
+Engine.define('Textarea', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
+    function Textarea(params) {
+        AbstractInput.apply(this, arguments);
+    }
+    Textarea.prototype = Object.create(AbstractInput.prototype);
+
+    Textarea.prototype.getElementType = function() {
+        return 'textarea'
+    };
+    Textarea.prototype.getInputType = function() {
+        return null;
+    };
+    Textarea.toString = function() {
+        return "Textarea"
+    };
+    Textarea.prototype.constructor = Textarea;
+    return Textarea;
+});
+Engine.define('GenericForm', ['Dom', 'Text', 'Textarea', 'Radio', 'Select', 'Checkbox', 'Validation', 'Password'], function(){
 
     var Dom = Engine.require('Dom');
     var Text = Engine.require('Text');
+    var Radio = Engine.require('Radio');
+    var Select = Engine.require('Select');
+    var Checkbox = Engine.require('Checkbox');
+    var Password = Engine.require('Password');
+    var Textarea = Engine.require('Textarea');
+    var Validation = Engine.require('Validation');
 
     function GenericForm(data, meta, onSubmit) {
         if(!onSubmit)throw 'onSubmit is required for generic form';
         var html = [];
         var me = this;
-        this.fields = [];
+        this.fields = {};
         this.model = {};
         this.onSubmitSuccess = onSubmit;
         if(!meta) {
@@ -1494,8 +1609,7 @@ Engine.define('GenericForm', ['Dom', 'Text'], function(){
                 if(m.ignore)continue;
                 field = m.render ?
                     (typeof m.render === "function" ? m.render(this.onChange, key, value) : m.render) :
-                    this.buildText(key, value, m.onchange);
-                this.fields.push(field);
+                    this.buildInput(key, value, m.onchange);
                 var content = [
                     typeof m.contentBefore === 'function' ? m.contentBefore(key, value) : m.contentBefore,
                     field.container,
@@ -1505,17 +1619,17 @@ Engine.define('GenericForm', ['Dom', 'Text'], function(){
                     if(typeof m.wrapper === 'function') {
                         html.push(m.wrapper(content, key, value));
                     } else {
-                        Dom.append(m.wrapper(content));
+                        Dom.append(m.wrapper, content);
                         html.push(m.wrapper);
                     }
                 } else {
                     html = html.concat(content);
                 }
             } else {
-                field = this.buildText(key, value);
-                this.fields.push(field);
+                field = this.buildInput(key, value);
                 html.push(field.container)
             }
+            this.fields[key] = field;
         }
 
         this.submit = Dom.el('div', null, Dom.el('input', {type: 'submit', class: 'primary', value: 'Submit'}));
@@ -1533,29 +1647,103 @@ Engine.define('GenericForm', ['Dom', 'Text'], function(){
     };
     GenericForm.prototype.validate = function(){
         if(this.meta) {
+            var out = true;
             for(var key in this.meta) {
                 if(!this.meta.hasOwnProperty(key))continue;
-                var m = this.meta[key];
-                if(m.validations) {
+                var meta = this.meta[key];
+                var value = this.model[key];
+                var field = this.fields[key];
 
+                if(meta.removeErrors) {
+                    meta.removeErrors()
+                } else if(field.removeErrors) {
+                    field.removeErrors();
+                }
+                if(meta.validations) {
+                    var errorKeys = Validation.validate(value, meta.validations);
+
+                    if(errorKeys.length > 0) {
+                        out = false;
+                        var messages = this.findErrorMessages(meta, errorKeys);
+                        if(meta.addError) {
+                            meta.addError(messages);
+                        } else if(field.addError){
+                            field.addError(messages);
+                        }
+                    }
                 }
             }
-            return true;
+            return out;
         } else {
             return true;
         }
     };
+
+    GenericForm.prototype.findErrorMessages = function(meta, errorKeys){
+        var out = {};
+        for(var key in errorKeys) {
+            if(errorKeys.hasOwnProperty(key)) {
+                if(meta.errorMessages && meta.errorMessages[key] !== undefined ){
+                    out[key] = meta.errorMessages[key];
+                } else if(Validation.messages[key] !== undefined) {
+                    out[key] = Validation.messages[key];
+                } else {
+                    out[key] = Validation.messages['default'];
+                }
+            }
+        }
+        return {};
+    };
     GenericForm.prototype.onChange = function(key, value){
         this.model[key] = value;
     };
-    GenericForm.prototype.buildText = function(key, value, onchange){
+    GenericForm.prototype.buildInput = function(key, value, onchange, meta){
         var me = this;
-        var out = new Text({name: key, value: value, onchange: function(e){
+        var out = null;
+        var params = {name: key, value: value, onchange: function(e){
             me.onChange(key, out.getValue());
             if(onchange){
-                onchange();
+                onchange(e);
             }
-        }});
+        }};
+        if(meta && meta.options) {
+            params.options = meta.options;
+        }
+        var metaType = meta && meta.type ? meta.type : null;
+        if(metaType) {
+            switch (metaType.toLowerCase()) {
+                case 'text':
+                    out = new Text(params);
+                    break;
+                case 'textarea':
+                    out = new Textarea(params);
+                    break;
+                case 'checkbox':
+                    out = new Checkbox(params);
+                    break;
+                case 'radio':
+                    out = new Radio(params);
+                    break;
+                case 'select':
+                    out = new Select(params);
+                    break;
+                case 'password':
+                    out = new Password(params);
+                    break;
+                default:
+                    throw "Unknown type for form component - " +metaType+". Use one of the following: [text, textarea, checkbox, radio, select, password]"
+            }
+        } else if(meta.options) {
+            if(meta.options.length > 3) {
+                out = new Select(params)
+            } else {
+                out = new Radio(params);
+            }
+        } else if(typeof value === 'boolean') {
+            out = new Checkbox(params)
+        } else {
+            out = new Text(params);
+        }
         return out;
     };
 
@@ -1890,7 +2078,7 @@ Engine.define('Word', ['Rest'], function(){
         var lang = Word.dictionaries[language];
         if(lang) {
             var mod = lang[module] || lang['default'] || {};
-            return mod[key];
+            return mod[key] !== undefined ? mod[key] : ((module ? module : 'default')  + ":" + key);
         } else {
             return null;
         }

@@ -39,10 +39,11 @@ Engine.define('Application', ['Dom', 'Menu', 'Word', 'Dispatcher', 'Config', 'Re
         me.dispatcher.addMapping('UtilsInfo', 'utils-info');
         me.dispatcher.addMapping('UtilsInfo', 'utils-info/:app');
         Word('menu_utils', utils.link);
-/*
+
         var forms = mainMenu.menu('forms-info');
         me.dispatcher.addMapping('FormsInfo', 'forms-info');
-        Word('menu_forms', forms.link);
+        me.dispatcher.addMapping('FormsInfo', 'forms-info/:app');
+        Word('menu_forms', forms.link);/*
 
         var components = mainMenu.menu('components-info');
         me.dispatcher.addMapping('ComponentsInfo', 'components-info');
