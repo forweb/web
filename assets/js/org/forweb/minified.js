@@ -309,7 +309,174 @@ Engine.define('Rest', 'Ajax', (function () {
     };
     return Rest;
 }));
+Engine.define('Word', ['Rest'], function(){
+    var Rest = Engine.require('Rest');
+    var onLoad = {};
+    var enLaguageLoaded = false;
 
+    var Word = function(key, module, container, strategy) {
+        if(!strategy && typeof container === 'string') {
+            strategy = container;
+            container = module;
+            module = 'default';
+        }
+        if(!strategy) {
+            strategy = 'text';
+        }
+        if(typeof module !== 'string' && !container) {
+            container = module;
+            module = 'default';
+        }
+
+        var clb = function(text){
+            if(container.getAttribute('data-w-key') !== key) {
+                container.setAttribute('data-w-key', key);
+            }
+            if(container.getAttribute('data-w-module') !== module) {
+                container.setAttribute('data-w-module', module);
+            }
+            if(container.getAttribute('data-w-strategy') !== strategy) {
+                container.setAttribute('data-w-strategy', strategy);
+            }
+            if(strategy != 'text') {
+                if(strategy == 'append') {
+                    container.appendChild(document.createTextNode(text));
+                } else {
+                    container.innerHTML = text;
+                }
+            } else {
+                container.innerText = text;
+            }
+        };
+        if(Word.languageLoaded(Word.language)) {
+            clb(Word.get(key, module));
+        } else {
+            Word.loadLanguage(Word.language, function(){
+                clb(Word.get(key, module))
+            });
+        }
+    };
+    Word.dictionaries = {};
+    Word.dictionariesPath = 'assets/js/word/';
+
+    Word.get = function(key, module, language){
+        if(!language) language = Word.language;
+        if(!module)module = 'default';
+        var lang = Word.dictionaries[language];
+        if(lang) {
+            var mod = lang[module] || lang['default'] || {};
+            return mod[key] !== undefined ? mod[key] : ((module ? module : 'default')  + ":" + key);
+        } else {
+            return null;
+        }
+    };
+
+    Word.languageLoaded = function(language){
+        if(!language) language = Word.language;
+        return Word.dictionaries[language] !== undefined;
+    };
+
+    Word.loadLanguage = function(language, clb){
+        if(typeof language === 'function' && !clb) {
+            clb = language;
+            language = Word.language;
+        } else if(!language) {
+            language = Word.language;
+        }
+        if(!onLoad[language]) {
+            if(typeof clb === 'function') {
+                onLoad[language] = [clb];
+            } else {
+                onLoad[language] = clb;
+            }
+        } else {
+            if(typeof clb === 'function') {
+                onLoad[language].push(clb);
+            } else {
+                onLoad[language] = onLoad[language].concat(clb);
+            }
+            return;
+        }
+        if(Word.loader) {
+            Word.loader(language, onLoad[language]);
+        } else {
+            Rest.doGet(Word.dictionariesPath + language + '.json').then(
+                function(dictionary){
+                    var norm = {};
+                    for(var k in dictionary) {
+                        if(!dictionary.hasOwnProperty(k)) continue;
+                        var value = dictionary[k];
+                        if(typeof value === 'string') {
+                            if(!norm.default) {
+                                norm.default = {};
+                            }
+                            norm.default[k] = value;
+                        } else {
+                            norm[k] = value;
+                        }
+                    }
+                    Word.dictionaries[language] = norm;
+                    Word.language = language;
+                    for(var i = 0; i < onLoad[language].length; i++) {
+                        onLoad[language][i]();
+                    }
+                },
+                function(){
+                    if(!enLaguageLoaded) {
+                        enLaguageLoaded = true;
+                        Word.loadLanguage('en', onLoad[language]);
+                        delete(onLoad[language]);
+                    } else {
+                        Engine.notify("Can't load language - " + language, 'E');
+                    }
+                }
+            );
+
+        }
+    };
+    Word.translate = function(language, node) {
+        if(!language) language = Word.language;
+        if(!node)node = document.body;
+        function clb() {
+            var words = node.getElementsByClassName('word');
+            for(var i = 0; i < words.length; i++) {
+                var w = words[i];
+                var key = w.getAttribute('data-w-key');
+                var module = w.getAttribute('data-w-module');
+                var strategy = w.getAttribute('data-w-strategy');
+                if(key) {
+                    Word(key, module, w, strategy);
+                }
+            }
+        }
+        if(Word.languageLoaded(language)) {
+            Word.language = language;
+            clb();
+        } else {
+            Word.loadLanguage(language, clb);
+        }
+    };
+
+    Word.create = function(defaultModule, defaultContainer) {
+        var out = function(key, module, container, strategy){
+            if(typeof module !== 'string') {
+                container = module;
+                module = null;
+            }
+            return Word(key, module || defaultModule, container || defaultContainer, strategy)
+        };
+        out.get = function(key, language){
+            return Word.get(key, defaultModule, language);
+        };
+        out.languageLoaded = Word.languageLoaded;
+        out.loadLanguage = Word.loadLanguage;
+        out.translate = Word.translate;
+        return out;
+    };
+
+    Word.language = navigator.language || navigator.userLanguage || 'en';
+    return Word;
+});
 Engine.define("Config", (function () {
     function Config(configName) {
         this.configName = configName;
@@ -342,6 +509,14 @@ Engine.define("Config", (function () {
     return Config;
 }));
 Engine.define('Dom', (function () {
+
+    if(typeof Element !== undefined) {
+        Element.prototype.isDomElement = true;
+    }
+    if(typeof HTMLElement !== undefined) {
+        HTMLElement.prototype.isDomElement = true;
+    }
+
     var Dom = {};
     /**
      * @param type string
@@ -393,14 +568,19 @@ Engine.define('Dom', (function () {
             el.className = attr;
         } else if (attr)for (var i in attr) {
             if (!attr.hasOwnProperty(i))continue;
+            var value = attr[i];
             if (typeof attr[i] == 'function') {
                 var key = i;
                 if (key.indexOf("on") === 0) {
                     key = key.substring(2);
                 }
-                el.addEventListener(key, attr[i]);
+                el.addEventListener(key, value);
             } else {
-                el.setAttribute(i, attr[i])
+                if(i === 'value') {
+                    el.value = value;
+                } else {
+                    el.setAttribute(i, value)
+                }
             }
         }
     };
@@ -416,7 +596,14 @@ Engine.define('Dom', (function () {
                     }
                 }
             } else {
-                o.appendChild(content)
+                //used prototyped property
+                if(content.isDomElement) {
+                    o.appendChild(content)
+                } else if(content.container) {
+                    Dom.append(o, content.container);
+                } else {
+                    throw "Can't append object"
+                }
             }
         }
     };
@@ -503,7 +690,14 @@ Engine.define('Dom', (function () {
                     }
                 }
             } else {
-                el.insertBefore(content, before);
+                //used prototyped property
+                if(content.isDomElement) {
+                    el.insertBefore(content, before);
+                } else if(content.container) {
+                    Dom.insert(el, content.container, before);
+                } else {
+                    throw "Can't inesert object"
+                }
             }
         }
     };
@@ -1261,6 +1455,31 @@ Engine.define("AbstractInput", ['Dom', 'StringUtils'], (function(Dom, StringUtil
         this.errorsData = null;
     }
 
+    /**
+     * Remove errors from input.
+     * If first argument is null or undefined, all errors will be removed
+     * if first argument is string, only error of this type will be removed
+     * if first argument is array, all errors from this array will be removed
+     * @param errorKeys
+     */
+    AbstractInput.prototype.removeErrors = function(errorKeys) {
+        var errorsToShow = {};
+        if(this.errorsData && errorKeys) {
+            if(typeof errorKeys === 'string') {
+                errorKeys = [errorKeys];
+            }
+
+            for (var key in this.errorsData) {
+                if (this.errorsData.hasOwnProperty(key)) {
+                    if(errorKeys.indexOf(key) === -1) {
+                        errorsToShow[key] = this.errorsData[key];
+                    }
+                }
+            }
+        }
+        this.errorsData = {};
+        this.addError(errorsToShow);
+    };
     AbstractInput.prototype.addError = function(errors) {
         if(this.errors === null) {
             this.errors = Dom.el('div', 'formfield-errors');
@@ -1278,12 +1497,14 @@ Engine.define("AbstractInput", ['Dom', 'StringUtils'], (function(Dom, StringUtil
                 }
             }
         }
-
+        var out = {};
         for(var k in this.errorsData) {
             if(this.errorsData.hasOwnProperty(k) && this.errorsData[k]) {
-                this.errors.appendChild(Dom.el('div', 'err', this.errorsData[k]));
+                out[k] = Dom.el('div', 'err', this.errorsData[k]);
+                this.errors.appendChild(out[k]);
             }
         }
+        return out;
     };
 
     AbstractInput.prototype.buildLabel = function(params) {
@@ -1295,14 +1516,7 @@ Engine.define("AbstractInput", ['Dom', 'StringUtils'], (function(Dom, StringUtil
         } else {
             content = StringUtils.normalizeText(params.name);
         }
-        var attr = {};
-        if(params.id) {
-            attr.id = params.id;
-        } else if(params.formId) {
-            attr.id = params.formId + "_" + params.name;
-        } else {
-            attr.id = params.name;
-        }
+        var attr = {for: this.input.id};
         return Dom.el('label', attr, content);
     };
     AbstractInput.prototype.getInputType = function() {
@@ -1333,7 +1547,7 @@ Engine.define("AbstractInput", ['Dom', 'StringUtils'], (function(Dom, StringUtil
         }
         for(var k in params) {
             if(!params.hasOwnProperty(k))continue;
-            if(k.indexOf('on') === 0) {
+            if(typeof params[k] === 'function') {
                 out[k] = params[k];
             }
         }
@@ -1351,9 +1565,9 @@ Engine.define("AbstractInput", ['Dom', 'StringUtils'], (function(Dom, StringUtil
 Engine.define('Checkbox', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     function Checkbox(params) {
         AbstractInput.apply(this, arguments);
-        Dom.insert(this.label, this.input);
-        this.input.checked = this._initChecked;
-        delete(this._initChecked);
+        Dom.append(this.container, [this.input, this.label]);
+        this.input.checked = this._checked;
+        delete(this._checked);
     }
     Checkbox.prototype = Object.create(AbstractInput.prototype);
 
@@ -1372,7 +1586,7 @@ Engine.define('Checkbox', ['Dom', 'AbstractInput'], function(Dom, AbstractInput)
     };
     Checkbox.prototype.prepareAttributes = function(params) {
         var out = AbstractInput.prototype.prepareAttributes.apply(this, arguments);
-        this._initChecked = !!params.value;
+        this._checked = !!params.value;
         delete out.value;
         return out;
     };
@@ -1383,6 +1597,7 @@ Engine.define('Checkbox', ['Dom', 'AbstractInput'], function(Dom, AbstractInput)
         return "Radio"
     };
     Checkbox.prototype.constructor = Checkbox;
+
     return Checkbox;
 });
 Engine.define('FieldMeta', function(){
@@ -1393,12 +1608,15 @@ Engine.define('FieldMeta', function(){
         this.wrapper = params.wrapper || null;//if defined, all content will be putted inside of it. DOM node or function
         this.contentBefore = params.contentBefore || null;
         this.contentAfter = params.contentAfter || null;
-        this.onchange = params.onchange || null;//callback function for onchange
+        this.listeners = params.listeners || null;//callback functions. If this is function, it will listen onchange
         this.validations = params.validations || null;//validation rules
         this.removeErrors = params.removeErrors || null;//custom remove errors function
         this.errorMessages = params.errorMessages || null;//error messages holder. Should be object with key-value pairs or string
         this.options = params.options || null;//required field for "select", "radio", "checkboxes" component
         this.type = params.type || "text";//if render method not specified, this type will be used for component rendering
+        this.label = params.label || null;//alternative label value
+        this.wordKey = params.wordKey || null;//if form use word integration, this key will be used for label
+        this.wordErrorKey = params.wordErrorKey || null;//if form use word integration, this key will be used for error message
     }
     return FieldMeta;
 });
@@ -1426,6 +1644,7 @@ Engine.define('Text', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
 Engine.define('Select', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
     function Select(params) {
         AbstractInput.apply(this, arguments);
+
         this.params = params;
         this.options = params.options;
         this.update(params.value);
@@ -1477,13 +1696,6 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
         this.optionsContainer.innerHTML = '';
         this.inputs = [];
         var name = this.params.name;
-        var listeners = {};
-        for(var key in this.params) {
-            if(!this.params.hasOwnProperty(key))continue;
-            if(typeof this.params[key] === 'function'){
-                listeners[key] = this.params[key];
-            }
-        }
         for(var i = 0; i < this.options.length; i++) {
             var opt = this.options[i];
             var input = Dom.el('input', {
@@ -1495,7 +1707,13 @@ Engine.define('Radio', ['Dom', 'AbstractInput'], function(Dom, AbstractInput) {
             if(opt.value === this.getValue() || opt.value === value) {
                 input.checked = true;
             }
-
+            var listeners = {};
+            for(var key in this.params) {
+                if(!this.params.hasOwnProperty(key))continue;
+                if((key + "").indexOf('on') === 0 && typeof this.params[key] === 'function'){
+                    listeners[key] = this.params[key];
+                }
+            }
             Dom.addListeners(input, listeners);
             this.inputs.push(input);
             this.optionsContainer.appendChild(
@@ -1577,177 +1795,123 @@ Engine.define('Textarea', ['Dom', 'AbstractInput'], function(Dom, AbstractInput)
     Textarea.prototype.constructor = Textarea;
     return Textarea;
 });
-Engine.define('GenericForm', ['Dom', 'Text', 'Textarea', 'Radio', 'Select', 'Checkbox', 'Validation', 'Password'], function(){
+Engine.define("Validation", function () {
+    var IS_EMAIL = /^([a-zA-Z0-9_.+-])+\@(([cd a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+    var cache = {};
 
-    var Dom = Engine.require('Dom');
-    var Text = Engine.require('Text');
-    var Radio = Engine.require('Radio');
-    var Select = Engine.require('Select');
-    var Checkbox = Engine.require('Checkbox');
-    var Password = Engine.require('Password');
-    var Textarea = Engine.require('Textarea');
-    var Validation = Engine.require('Validation');
-
-    function GenericForm(data, meta, onSubmit) {
-        if(!onSubmit)throw 'onSubmit is required for generic form';
-        var html = [];
-        var me = this;
-        this.fields = {};
-        this.model = {};
-        this.onSubmitSuccess = onSubmit;
-        if(!meta) {
-            meta = {};
-        }
-        this.meta = meta;
-        for(var key in data) {
-            if(!data.hasOwnProperty(key))continue;
-            var value = data[key];
-            this.model[key] = value;
-            var field;
-            if(meta[key]) {
-                var m = meta[key];
-                if(m.ignore)continue;
-                field = m.render ?
-                    (typeof m.render === "function" ? m.render(this.onChange, key, value) : m.render) :
-                    this.buildInput(key, value, m.onchange);
-                var content = [
-                    typeof m.contentBefore === 'function' ? m.contentBefore(key, value) : m.contentBefore,
-                    field.container,
-                    typeof m.contentAfter === 'function' ? m.contentAfter(key, value) : m.contentAfter
-                ];
-                if(m.wrapper) {
-                    if(typeof m.wrapper === 'function') {
-                        html.push(m.wrapper(content, key, value));
-                    } else {
-                        Dom.append(m.wrapper, content);
-                        html.push(m.wrapper);
-                    }
-                } else {
-                    html = html.concat(content);
+    function _normalizeRules(rules) {
+        if (typeof rules === 'string') {
+            if (cache[rules] === undefined) {
+                var strRules = rules.split(' ');
+                var object = {};
+                for (var i = 0; i < strRules.length; i++) {
+                    var args = strRules[i].split(':');
+                    var name = args.shift();
+                    object[name] = args;
                 }
-            } else {
-                field = this.buildInput(key, value);
-                html.push(field.container)
+                cache[rules] = object;
             }
-            this.fields[key] = field;
+            rules = cache[rules];
+        } else if (!Array.isArray(rules)) {
+            for (var k in rules) {
+                if (rules.hasOwnProperty(k) && !Array.isArray(rules[k])) {
+                    rules[k] = [rules[k]]
+                }
+            }
         }
-
-        this.submit = Dom.el('div', null, Dom.el('input', {type: 'submit', class: 'primary', value: 'Submit'}));
-        this.container = Dom.el('form', null, [html, this.submit]);
-        this.container.onsubmit = function(e){
-            me.onSubmit(e)
-        }
+        return rules ? rules : {};
     }
 
-    GenericForm.prototype.onSubmit = function(e){
-        if(e)e.preventDefault();
-        if(this.validate) {
-            this.onSubmitSuccess(this.model)
-        }
-    };
-    GenericForm.prototype.validate = function(){
-        if(this.meta) {
-            var out = true;
-            for(var key in this.meta) {
-                if(!this.meta.hasOwnProperty(key))continue;
-                var meta = this.meta[key];
-                var value = this.model[key];
-                var field = this.fields[key];
-
-                if(meta.removeErrors) {
-                    meta.removeErrors()
-                } else if(field.removeErrors) {
-                    field.removeErrors();
+    var Validation = {
+        /**
+         * @param value
+         * @param rules (if string: 'min:6 max:4 require') (if object: {require: true, min:[1], max: 5, custom: function(v){return v === 4}}
+         * @returns []
+         */
+        validate: function (value, rules) {
+            rules = _normalizeRules(rules);
+            var errors = [];
+            for (var rule in rules) {
+                if (rules.hasOwnProperty(rule) && Validation.rules.hasOwnProperty(rule)) {
+                    var isValid = Validation.rules[rule].apply(Validation.rules, [].concat(value, rules[rule]));
+                    if (!isValid) {
+                        errors.push(rule);
+                    }
+                } else {
+                    throw "Unknown validation rule: " + rule + ". Please use one of the following: " + Object.keys(Validation.rules);
                 }
-                if(meta.validations) {
-                    var errorKeys = Validation.validate(value, meta.validations);
-
-                    if(errorKeys.length > 0) {
-                        out = false;
-                        var messages = this.findErrorMessages(meta, errorKeys);
-                        if(meta.addError) {
-                            meta.addError(messages);
-                        } else if(field.addError){
-                            field.addError(messages);
+            }
+            return errors;
+        },
+        messages: {
+            required: 'Can\'t be empty.',
+            max: 'Number is too large.',
+            min: 'Number is too small.',
+            length: 'This is not valid length.',
+            email: 'Invalid email address',
+            number: 'Value is not a number',
+            positive: 'Value is not a positive number',
+            negative: 'Value is not a negative number',
+            time: 'Invalid time format',
+            dateString: 'Invalid date format.',
+            timeString: 'Invalid time format, must be hh:mm:ss.',
+            'default': 'Something wrong.'
+        },
+        rules: {
+            required: function (v, flag) {
+                if(!v) return false;
+                if (flag === 'lazy') {
+                    return ((v === '0' || (v.trim && v.trim() === '')) ? false : !!v)
+                } else if (flag === 'checkboxes') {
+                    for (var value in v) {
+                        if (v.hasOwnProperty(value) && v[value]) {
+                            return true;
                         }
                     }
-                }
-            }
-            return out;
-        } else {
-            return true;
-        }
-    };
-
-    GenericForm.prototype.findErrorMessages = function(meta, errorKeys){
-        var out = {};
-        for(var key in errorKeys) {
-            if(errorKeys.hasOwnProperty(key)) {
-                if(meta.errorMessages && meta.errorMessages[key] !== undefined ){
-                    out[key] = meta.errorMessages[key];
-                } else if(Validation.messages[key] !== undefined) {
-                    out[key] = Validation.messages[key];
+                    return false;
                 } else {
-                    out[key] = Validation.messages['default'];
+                    return !!v;
                 }
+            },
+            max: function (v, limit) {
+                if (!v)v = 0;
+                return parseInt(v) <= limit;
+            },
+            min: function (v, limit) {
+                if (!v)v = 0;
+                return parseInt(v) >= limit;
+            },
+            length: function (v, min, max) {
+                if (!v)v = "";
+                return (max === undefined ? true : v.length <= max) && v.length >= min;
+            },
+            pattern: function (v, pattern) {
+                return pattern.test(v);
+            },
+            number: function (v) {
+                if (!v)return true;
+                return Validation.rules.pattern(v, /^(-?\d*)$/g);
+            },
+            positive: function (v) {
+                return Validation.rules.pattern(v, /^(\d*)$/g);
+            },
+            negative: function (v) {
+                return Validation.rules.pattern(v, /^(-\d*)$/g);
+            },
+            email: function (v) {
+                return Validation.rules.pattern(v, IS_EMAIL);
+            },
+            time: function (v) {
+                if (!v)return true;
+                var test = /^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+                return test.test(v);
+            },
+            custom: function (v, callback) {
+                return callback(v);
             }
         }
-        return {};
     };
-    GenericForm.prototype.onChange = function(key, value){
-        this.model[key] = value;
-    };
-    GenericForm.prototype.buildInput = function(key, value, onchange, meta){
-        var me = this;
-        var out = null;
-        var params = {name: key, value: value, onchange: function(e){
-            me.onChange(key, out.getValue());
-            if(onchange){
-                onchange(e);
-            }
-        }};
-        if(meta && meta.options) {
-            params.options = meta.options;
-        }
-        var metaType = meta && meta.type ? meta.type : null;
-        if(metaType) {
-            switch (metaType.toLowerCase()) {
-                case 'text':
-                    out = new Text(params);
-                    break;
-                case 'textarea':
-                    out = new Textarea(params);
-                    break;
-                case 'checkbox':
-                    out = new Checkbox(params);
-                    break;
-                case 'radio':
-                    out = new Radio(params);
-                    break;
-                case 'select':
-                    out = new Select(params);
-                    break;
-                case 'password':
-                    out = new Password(params);
-                    break;
-                default:
-                    throw "Unknown type for form component - " +metaType+". Use one of the following: [text, textarea, checkbox, radio, select, password]"
-            }
-        } else if(meta.options) {
-            if(meta.options.length > 3) {
-                out = new Select(params)
-            } else {
-                out = new Radio(params);
-            }
-        } else if(typeof value === 'boolean') {
-            out = new Checkbox(params)
-        } else {
-            out = new Text(params);
-        }
-        return out;
-    };
-
-    return GenericForm;
+    return Validation;
 });
 Engine.define('UrlResolver', ['StringUtils'], function(StringUtils) {
     function UrlResolver(strategy) {
@@ -1842,6 +2006,258 @@ Engine.define('UrlResolver', ['StringUtils'], function(StringUtils) {
         return out;
     };
     return UrlResolver;
+});
+Engine.define('GenericForm', ['Dom', 'Text', 'Textarea', 'Radio', 'Select', 'Checkbox', 'Validation', 'Password', 'Word'], function(){
+
+    var Dom = Engine.require('Dom');
+    var Word = Engine.require('Word');
+    var Text = Engine.require('Text');
+    var Radio = Engine.require('Radio');
+    var Select = Engine.require('Select');
+    var Checkbox = Engine.require('Checkbox');
+    var Password = Engine.require('Password');
+    var Textarea = Engine.require('Textarea');
+    var Validation = Engine.require('Validation');
+
+    function GenericForm(data, fieldsMeta, formMeta) {
+        if(formMeta === undefined && typeof fieldsMeta === 'function') {
+            formMeta = {onSubmit: fieldsMeta};
+            fieldsMeta = null;
+        }
+        if(typeof formMeta === 'function') {
+            formMeta = {onSubmit: formMeta};
+        }
+        if(!formMeta.onSubmit)throw 'onSubmit is required for generic form';
+        var html = [];
+        var me = this;
+        this.fields = {};
+        this.word = formMeta.wordKey ? Word.create(formMeta.wordKey) : null;
+        this.model = data;
+        this.onSubmitSuccess = formMeta.onSubmit;
+        if(!fieldsMeta) {
+            fieldsMeta = {};
+        }
+        this.meta = fieldsMeta;
+        for(var key in data) {
+            if(!data.hasOwnProperty(key))continue;
+            var value = data[key];
+            this.model[key] = value;
+            var field;
+            var fieldWordLabel = null;
+            var fieldMeta = fieldsMeta[key];
+            if(fieldMeta === false){
+                continue;
+            } else if(fieldMeta) {
+                if(fieldMeta.ignore) {
+                    continue
+                }
+                field = fieldMeta.render ?
+                    (typeof fieldMeta.render === "function" ? fieldMeta.render(this.onChange, key, value) : fieldMeta.render) :
+                    this.buildInput(key, value, fieldMeta);
+                var content = [
+                    typeof fieldMeta.contentBefore === 'function' ? fieldMeta.contentBefore(key, value) : fieldMeta.contentBefore,
+                    field.container,
+                    typeof fieldMeta.contentAfter === 'function' ? fieldMeta.contentAfter(key, value) : fieldMeta.contentAfter
+                ];
+                if(fieldMeta.wrapper) {
+                    var wrapper = fieldMeta.wrapper;
+                    if(typeof wrapper === 'function') {
+                        html.push(wrapper(content, key, value));
+                    } else {
+                        Dom.append(wrapper, content);
+                        if(html.indexOf(wrapper) === -1) {
+                            html.push(wrapper);
+                        }
+                    }
+                } else {
+                    html = html.concat(content);
+                }
+                fieldWordLabel = fieldMeta.wordKey || null;
+            } else {
+                field = this.buildInput(key, value, null);
+                html.push(field.container)
+            }
+
+            if(formMeta.wordKey && field.label) {
+                this.word(fieldWordLabel || "label_" + key, field.label)
+            }
+            this.fields[key] = field;
+        }
+
+        this.submit = Dom.el('div', null, Dom.el('input', {type: 'submit', class: 'primary', value: 'Submit'}));
+        this.container = Dom.el('form', null, [html, this.submit]);
+        this.container.onsubmit = function(e){
+            me.onSubmit(e)
+        }
+    }
+
+    GenericForm.inputs = {
+        text: Text,
+        textarea: Textarea,
+        checkbox: Checkbox,
+        radio: Radio,
+        select: Select,
+        password: Password
+    };
+
+    GenericForm.prototype.onSubmit = function(e){
+        if(e)e.preventDefault();
+        if(this.validate()) {
+            this.onSubmitSuccess(this.model)
+        }
+    };
+    GenericForm.prototype.validateField = function(fieldName){
+        var meta = this.meta[fieldName];
+        if(!meta || meta.ignore === false) {
+            return true;
+        }
+        var value = this.model[fieldName];
+        var field = this.fields[fieldName];
+
+        if(meta.removeErrors) {
+            meta.removeErrors()
+        } else if(field.removeErrors) {
+            field.removeErrors();
+        }
+        if(meta.validations) {
+            var errorKeys = Validation.validate(value, meta.validations);
+
+            if(errorKeys.length > 0) {
+                var messages = this.findErrorMessages(meta, errorKeys);
+                if(meta.addError) {
+                    meta.addError(messages);
+                } else if(field.addError){
+                    var errorFields = field.addError(messages);
+                    if(this.word) {
+                        for(var errorKey in errorFields) {
+                            if(!errorFields.hasOwnProperty(errorKey))continue;
+                            var errorHtml = errorFields[errorKey];
+                            var wordErrorKey;
+                            if(meta.wordErrorKey) {
+                                if(typeof meta.wordErrorKey === 'string') {
+                                    wordErrorKey = meta.wordErrorKey;
+                                } else {
+                                    wordErrorKey = meta.wordErrorKey[errorKey];
+                                }
+                            }
+                            this.word(wordErrorKey || "error_" + fieldName, errorHtml);
+                        }
+                    }
+                }
+                return false;
+            } else {
+                return true;
+            }
+        }
+        return true;
+    };
+    GenericForm.prototype.validate = function(){
+        if(this.meta) {
+            var formValidation = true;
+            for(var key in this.meta) {
+                if(!this.meta.hasOwnProperty(key))continue;
+                var fieldValidation = this.validateField(key);
+                if(formValidation && !fieldValidation) {
+                    formValidation = false;
+                }
+            }
+            return formValidation;
+        } else {
+            return true;
+        }
+    };
+
+    GenericForm.prototype.findErrorMessages = function(meta, errorKeys){
+        var out = {};
+        for(var i = 0; i < errorKeys.length; i++) {
+            var key = errorKeys[i];
+            if(meta && typeof meta.errorMessages === 'string') {
+                out[key] = meta.errorMessages;
+            } else if(meta && meta.errorMessages && meta.errorMessages[key] !== undefined ){
+                out[key] = meta.errorMessages[key];
+            } else if(Validation.messages[key] !== undefined) {
+                out[key] = Validation.messages[key];
+            } else {
+                out[key] = Validation.messages['default'];
+            }
+        }
+        return out;
+    };
+    GenericForm.prototype.onChange = function(key, value){
+        this.model[key] = value;
+        this.validateField(key);
+    };
+    GenericForm.prototype.buildInput = function(key, value, meta){
+        var me = this;
+        var out = null;
+        var listeners = null;
+        var params = {name: key, value: value};
+        var metaType = null;
+
+        if(meta) {
+            listeners = meta.listeners;
+            params.options = meta.options || null;
+            params.label = meta.label || null;
+            if(meta.label === false) {
+                params.noLabel = true;
+            }
+            metaType = meta.type || null;
+        }
+
+        var onchange = null;
+        var onkeyup = null;
+        if(listeners) {
+            if(typeof listeners === 'function') {
+                listeners = {onchange: listeners};
+            }
+            for(var eventName in listeners) {
+                if(listeners.hasOwnProperty(eventName)) {
+                    var lc = eventName.toLowerCase();
+                    var eventListener = listeners[eventName];
+                    if(lc === 'onchange' || lc === 'change') {
+                        onchange = eventListener;
+                    } else if(lc === 'onkeyup' || lc === 'keyup') {
+                        onkeyup = eventListener
+                    } else {
+                        params[eventName] = eventListener;
+                    }
+                }
+            }
+        }
+        params.onchange = function(e){
+            me.onChange(key, out.getValue());
+            if(onchange){
+                onchange(e);
+            }
+        };
+        params.onkeyup = function(e){
+            me.onChange(key, out.getValue());
+            if(onkeyup){
+                onkeyup(e);
+            }
+        };
+
+        if(metaType) {
+            var clazz = GenericForm.inputs[metaType.toLowerCase()];
+            if(clazz === undefined) {
+                throw "Unknown type for form component - " +metaType+". Use one of the following: [text, textarea, checkbox, radio, select, password]"
+            }
+        } else if(params.options) {
+            if(params.options.length > 3) {
+                clazz = Select
+            } else {
+                clazz = Radio;
+            }
+        } else if(typeof value === 'boolean') {
+            clazz = Checkbox;
+        } else {
+            clazz = Text;
+        }
+        out = new clazz(params);
+        return out;
+    };
+
+    return GenericForm;
 });
 Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
 
@@ -2021,172 +2437,4 @@ Engine.define('Dispatcher', ['Dom', 'UrlResolver', 'UrlUtils'], function () {
     }
 
     return Dispatcher;
-});
-Engine.define('Word', ['Rest'], function(){
-    var Rest = Engine.require('Rest');
-    var onLoad = {};
-    var enLaguageLoaded = false;
-
-    var Word = function(key, module, container, strategy) {
-        if(!strategy && typeof container === 'string') {
-            strategy = container;
-            container = module;
-            module = 'default';
-        }
-        if(!strategy) {
-            strategy = 'text';
-        }
-        if(typeof module !== 'string' && !container) {
-            container = module;
-            module = 'default';
-        }
-
-        var clb = function(text){
-            if(container.getAttribute('data-w-key') !== key) {
-                container.setAttribute('data-w-key', key);
-            }
-            if(container.getAttribute('data-w-module') !== module) {
-                container.setAttribute('data-w-module', module);
-            }
-            if(container.getAttribute('data-w-strategy') !== strategy) {
-                container.setAttribute('data-w-strategy', strategy);
-            }
-            if(strategy != 'text') {
-                if(strategy == 'append') {
-                    container.appendChild(document.createTextNode(text));
-                } else {
-                    container.innerHTML = text;
-                }
-            } else {
-                container.innerText = text;
-            }
-        };
-        if(Word.languageLoaded(Word.language)) {
-            clb(Word.get(key, module));
-        } else {
-            Word.loadLanguage(Word.language, function(){
-                clb(Word.get(key, module))
-            });
-        }
-    };
-    Word.dictionaries = {};
-    Word.dictionariesPath = 'assets/js/word/';
-
-    Word.get = function(key, module, language){
-        if(!language) language = Word.language;
-        if(!module)module = 'default';
-        var lang = Word.dictionaries[language];
-        if(lang) {
-            var mod = lang[module] || lang['default'] || {};
-            return mod[key] !== undefined ? mod[key] : ((module ? module : 'default')  + ":" + key);
-        } else {
-            return null;
-        }
-    };
-
-    Word.languageLoaded = function(language){
-        if(!language) language = Word.language;
-        return Word.dictionaries[language] !== undefined;
-    };
-
-    Word.loadLanguage = function(language, clb){
-        if(typeof language === 'function' && !clb) {
-            clb = language;
-            language = Word.language;
-        } else if(!language) {
-            language = Word.language;
-        }
-        if(!onLoad[language]) {
-            if(typeof clb === 'function') {
-                onLoad[language] = [clb];
-            } else {
-                onLoad[language] = clb;
-            }
-        } else {
-            if(typeof clb === 'function') {
-                onLoad[language].push(clb);
-            } else {
-                onLoad[language] = onLoad[language].concat(clb);
-            }
-            return;
-        }
-        if(Word.loader) {
-            Word.loader(language, onLoad[language]);
-        } else {
-            Rest.doGet(Word.dictionariesPath + language + '.json').then(
-                function(dictionary){
-                    var norm = {};
-                    for(var k in dictionary) {
-                        if(!dictionary.hasOwnProperty(k)) continue;
-                        var value = dictionary[k];
-                        if(typeof value === 'string') {
-                            if(!norm.default) {
-                                norm.default = {};
-                            }
-                            norm.default[k] = value;
-                        } else {
-                            norm[k] = value;
-                        }
-                    }
-                    Word.dictionaries[language] = norm;
-                    Word.language = language;
-                    for(var i = 0; i < onLoad[language].length; i++) {
-                        onLoad[language][i]();
-                    }
-                },
-                function(){
-                    if(!enLaguageLoaded) {
-                        enLaguageLoaded = true;
-                        Word.loadLanguage('en', onLoad[language]);
-                        delete(onLoad[language]);
-                    } else {
-                        Engine.notify("Can't load language - " + language, 'E');
-                    }
-                }
-            );
-
-        }
-    };
-    Word.translate = function(language, node) {
-        if(!language) language = Word.language;
-        if(!node)node = document.body;
-        function clb() {
-            var words = node.getElementsByClassName('word');
-            for(var i = 0; i < words.length; i++) {
-                var w = words[i];
-                var key = w.getAttribute('data-w-key');
-                var module = w.getAttribute('data-w-module');
-                var strategy = w.getAttribute('data-w-strategy');
-                if(key) {
-                    Word(key, module, w, strategy);
-                }
-            }
-        }
-        if(Word.languageLoaded(language)) {
-            Word.language = language;
-            clb();
-        } else {
-            Word.loadLanguage(language, clb);
-        }
-    };
-
-    Word.create = function(defaultModule, defaultContainer) {
-        var out = function(key, module, container, strategy){
-            if(typeof module !== 'string') {
-                container = module;
-                module = null;
-            }
-            return Word(key, module || defaultModule, container || defaultContainer, strategy)
-        };
-        out.get = function(key, language){
-            return Word.get(key, defaultModule, language);
-        };
-        out.languageLoaded = Word.languageLoaded;
-        out.loadLanguage = Word.loadLanguage;
-        out.translate = Word.translate;
-        return out;
-    };
-
-    Word.language = navigator.language || navigator.userLanguage || 'en';
-    return Word;
 });

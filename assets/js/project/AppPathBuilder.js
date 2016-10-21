@@ -15,6 +15,9 @@ Engine.define('AppPathBuilder', function(){
             case 'EngineInfo':
                 path = 'applications/' + app;
                 break;
+            case 'GenericFormSamples':
+                path = 'applications/forms-info/' + app;
+                break;
             case 'Application':
                 path = app;
                 break;

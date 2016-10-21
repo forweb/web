@@ -1,4 +1,4 @@
-Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio', 'Textarea', 'Checkbox', 'Select'], function(){
+Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio', 'Textarea', 'Checkbox', 'Select', 'GenericFormSamples'], function(){
     var Dom = Engine.require('Dom');
     var Word = Engine.require('Word');
     var Menu = Engine.require('Menu');
@@ -8,6 +8,7 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
     var Textarea = Engine.require('Textarea');
     var Checkbox = Engine.require('Checkbox');
     var StringUtils = Engine.require('StringUtils');
+    var GenericFormSamples = Engine.require('GenericFormSamples');
 
     function FormsInfo(context, placeApplication){
         this.context = context;
@@ -21,8 +22,8 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
         this.createMenu('Radio');
         this.createMenu('Checkbox');
         this.createMenu('Select');
-        this.createMenu('Validations');
-        this.createMenu('Metadata');
+        this.createMenu('Validation');
+        this.createMenu('FieldMeta');
         this.createMenu('GenericForm');
         this.sidebar = Dom.el('div', 'sidebar', this.menu.container);
 
@@ -55,8 +56,8 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
             case 'radio':
             case 'checkbox':
             case 'select':
-            case 'validations':
-            case 'metadata':
+            case 'validation':
+            case 'field_meta':
             case 'generic_form':
                 Word('forms_' +app+ '_content', this.content, 'html');
                 this.examples.innerHTML = '';
@@ -75,7 +76,7 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
         return Dom.el('div', "content", [
             Dom.el('code', null, "var Dom = Engine.require('Dom');\n" +
                 "var console = Dom.el('div');\n" +
-                "var text = new Text({name: 'example', function(){\n"+
+                "var text = new Text({name: 'example', onkeyup: function(){\n"+
                 "    console.innerHTML = text.getValue();\n" +
                 "}});\n" +
                 "Dom.append(document.body, text.container);\n" +
@@ -161,6 +162,12 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
             Dom.el('code', null, [checkbox.container, console])
         ])
     };
+
+
+    FormsInfo.prototype.initGenericFormExample = function() {
+        return new GenericFormSamples();
+    };
+
     FormsInfo.prototype.prepareExample = function(app) {
         var clazz = null;
         switch (app){
@@ -179,9 +186,9 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
             case 'radio':
                 return this.initRadioExample();
                 break;
-        }
-        if(clazz !== null) {
-            return this.initExample(clazz);
+            case 'generic_form':
+                return this.initGenericFormExample();
+                break;
         }
     }
 

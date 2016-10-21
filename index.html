@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>ForWeb framework</title>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <script src="/assets/js/org/forweb/minified.js"></script>
     <script src="/assets/js/project/AppPathBuilder.js"></script>
     <link rel="stylesheet" href="/assets/css/style.css"/>
 </head>
 <body>
-    <div id="menu" class="main-menu"></div>
-    <div id="application"></div>
-    <textarea rows="20" id="text"></textarea>
-    <br/>
-    <textarea rows="20" id="out"></textarea>
-    <button onclick="process()">process</button>
-    <button onclick="r_process()">reverse process</button>
+<div id="menu" class="main-menu"></div>
+<div id="application"></div>
+<textarea rows="20" id="text"></textarea>
+<br/>
+<textarea rows="20" id="out"></textarea>
+<button onclick="process()">process</button>
+<button onclick="r_process()">reverse process</button>
 <script>
     function process() {
         var t = document.getElementById('text');
@@ -29,7 +29,7 @@
     }
 
     Engine.log = false;
-    !function() {
+    !function () {
         var AppPathBuilder = Engine.require('AppPathBuilder');
         Engine.pathBuilder = [new AppPathBuilder()];
 

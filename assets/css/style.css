@@ -23,6 +23,7 @@
 }
 
 code {
+    overflow: auto;
     display: block;
     white-space: pre;
     font-size: inherit;
@@ -35,6 +36,7 @@ code {
 }
 
 table code, code.inline {
+    overflow: visible;
     display: inline-block;
     padding: 0 4px;
     margin: 0;
@@ -117,11 +119,13 @@ body {
     background-color: #f8f8f8;
     border: 1px solid #e7e7e7;
 }
+
 @media (min-width: 468px) {
     .sidebar {
         float: left;
         width: 250px;
     }
+
     .content {
         margin-left: 265px;
     }
@@ -131,17 +135,22 @@ body, html {
     height: 100%;
 }
 
-    .sidebar .menu-item:first-child {
-        border-top: 1px #e5e5e5 solid;
-    }
+.sidebar .menu-item:first-child {
+    border-top: 1px #e5e5e5 solid;
+}
 
-    .sidebar .menu-item:first-child {
-        border-top: none;
-    }
-    .sidebar .menu-item a {
-        padding: 12px 15px;
-        display: inline-block;
-    }
-    .sidebar .menu-item {
-        border-top: 1px #e5e5e5 solid;
-    }
+.sidebar .menu-item:first-child {
+    border-top: none;
+}
+
+.sidebar .menu-item a {
+    padding: 12px 15px;
+    display: inline-block;
+}
+
+.sidebar .menu-item {
+    border-top: 1px #e5e5e5 solid;
+}
+.formfield-errors{
+    color: red;
+}
