@@ -20,7 +20,8 @@ Engine.define("GenericFormSamples", ['GenericForm', 'StringUtils', 'Textarea', '
             this.generateExample("validationsExample"),
             this.generateExample("labelExample"),
             this.generateExample("wordExample"),
-            this.generateExample("optionsExample")
+            this.generateExample("optionsExample"),
+            this.generateExample("fieldsetExample"),
         ])
     }
 
@@ -40,6 +41,39 @@ Engine.define("GenericFormSamples", ['GenericForm', 'StringUtils', 'Textarea', '
         var console = Dom.el('div', 'console');
         var form = new GenericForm(
             person,
+            function(){
+                console.innerHTML = "submit event: " + JSON.stringify(person);
+            }
+        );
+        return Dom.el('div', 'sample', [form, console]);
+    };
+
+    GenericFormSamples.prototype.fieldsetExample = function() {
+        var person = {
+            firstName: 'John',
+            lastName: 'Doe',
+            address: {
+                state: 'NV',
+                city: 'Reno',
+                address: 'cross of 71 Lincoln street and 10 ave, 14 building, room 1',
+                houseOwner: true
+            },
+            smoker: true
+        };
+        var console = Dom.el('div', 'console');
+        var form = new GenericForm(
+            person,
+            {
+                address: {
+                    legend: 'Address',
+                    metaData: {
+                        state: {
+                            validations: 'length:2:2'
+                        },
+                        address: 'textarea'
+                    }
+                }
+            },
             function(){
                 console.innerHTML = "submit event: " + JSON.stringify(person);
             }
