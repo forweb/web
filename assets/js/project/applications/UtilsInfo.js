@@ -3,11 +3,10 @@ Engine.define('UtilsInfo', ['Dom', 'Word', 'Menu'], function(){
     var Word = Engine.require('Word');
     var Menu = Engine.require('Menu');
 
-    function UtilsInfo(context, placeApplication){
+    function UtilsInfo(context){
         this.context = context;
-        this.placeApplication = placeApplication;
         this.content = Dom.el('div', 'content');
-        var menu = new Menu(placeApplication);
+        var menu = new Menu(function(appName){context.dispatcher.placeApplication(appName)});
         var m = menu.menu('utils-info/ajax', 'Ajax');
         Word("menu_utils_ajax", m.link);
         m = menu.menu('utils-info/rest', 'Rest');

@@ -10,12 +10,11 @@ Engine.define('FormsInfo', ['Dom', 'Word', 'Menu', 'StringUtils', 'Text', 'Radio
     var StringUtils = Engine.require('StringUtils');
     var GenericFormSamples = Engine.require('GenericFormSamples');
 
-    function FormsInfo(context, placeApplication){
+    function FormsInfo(context){
         this.context = context;
-        this.placeApplication = placeApplication;
         this.content = Dom.el('div', 'content');
         this.examples = Dom.el('div');
-        this.menu = new Menu(placeApplication);
+        this.menu = new Menu(function(appName){context.dispatcher.placeApplication(appName)});
         this.createMenu('AbstractInput');
         this.createMenu('Text');
         this.createMenu('Textarea');

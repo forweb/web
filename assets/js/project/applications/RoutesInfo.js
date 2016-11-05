@@ -3,11 +3,10 @@ Engine.define('RoutesInfo', ['Dom', 'Word', 'Menu'], function(){
     var Word = Engine.require('Word');
     var Menu = Engine.require('Menu');
 
-    function RoutesInfo(context, placeApplication){
+    function RoutesInfo(context){
         this.context = context;
-        this.placeApplication = placeApplication;
         this.content = Dom.el('div', 'content');
-        var menu = new Menu(placeApplication);
+        var menu = new Menu(function(appName){context.dispatcher.placeApplication(appName)});
         var m = menu.menu('routes-info/dispatcher', 'Dispatcher');
         Word("menu_routes_dispatcher", m.link);
 

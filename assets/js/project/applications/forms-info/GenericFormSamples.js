@@ -5,7 +5,7 @@ Engine.define("GenericFormSamples", ['GenericForm', 'StringUtils', 'Textarea', '
     var Word = Engine.require('Word');
     var Dom = Engine.require('Dom');
 
-    function GenericFormSamples(context, placeApplication) {
+    function GenericFormSamples(context) {
         var renderWarning = Dom.el('p', 'warning', "You should take care about onchange event.");
         Word("generic_form_render_warning", renderWarning);
         this.container = Dom.el('div', 'content', [
